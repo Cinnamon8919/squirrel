@@ -104,11 +104,12 @@ function usePoll(key,sv){
 var C={bg:"#F5F4F0",surface:"#FFFFFF",border:"#E2DED6",accent:"#1B4FD8",aL:"#EBF0FD",gold:"#B8941F",gL:"#FBF5E0",danger:"#C73B2A",dL:"#FDECEA",success:"#1E6E4A",sL:"#E8F5EE",purple:"#6B3FA0",pL:"#F2EBFB",orange:"#C45F1A",oL:"#FDF0E6",text:"#18170F",muted:"#6E6A5E",tag:"#ECEAE4",stale:"#FF6B35"};
 
 var QUADRANTS=[
-  {id:"do",    label:"FAIRE AUJOURD'HUI",sub:"Urgent + Important",        color:C.danger, bg:C.dL,icon:"🔴"},
-  {id:"plan",  label:"PLANIFIER",        sub:"Important — avec une date", color:C.accent, bg:C.aL,icon:"🔵"},
-  {id:"deleg", label:"DÉLÉGUER → CHARI", sub:"Urgent, pas important",     color:C.gold,   bg:C.gL,icon:"🟡"},
-  {id:"wait",  label:"EN ATTENTE",       sub:"Attend réponse / action",   color:C.orange, bg:C.oL,icon:"⏳"},
-  {id:"drop",  label:"ÉLIMINER",         sub:"Ni urgent ni important",    color:C.muted,  bg:C.tag,icon:"⚪"}
+  {id:"do",    label:"FAIRE AUJOURD'HUI",sub:"Urgent + Important",        color:C.danger,  bg:C.dL, icon:"🔴"},
+  {id:"plan",  label:"PLANIFIER",        sub:"Important — avec une date", color:C.accent,  bg:C.aL, icon:"🔵"},
+  {id:"deleg", label:"DÉLÉGUER → CHARI", sub:"Urgent, pas important",     color:C.gold,    bg:C.gL, icon:"🟡"},
+  {id:"wait",  label:"EN ATTENTE",       sub:"Attend réponse / action",   color:C.orange,  bg:C.oL, icon:"⏳"},
+  {id:"drop",  label:"ÉLIMINER",         sub:"Ni urgent ni important",    color:C.muted,   bg:C.tag,icon:"⚪"},
+  {id:"chari", label:"TÂCHES CHARI",     sub:"À faire par Chari — avec deadline", color:C.purple, bg:C.pL, icon:"🟣"}
 ];
 
 var DEFAULT_DUMP_CATS=[
@@ -365,7 +366,7 @@ function BrainDump(p){
         h("div",{style:{fontSize:12,color:C.muted}},"Où va cet élément ?")
       ),
       h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
-        QUADRANTS.map(function(q){return h("button",{key:q.id,onClick:function(){aQ(cur.id,q.id);},style:{padding:"11px 8px",borderRadius:12,cursor:"pointer",border:"2px solid "+q.color,background:q.bg,display:"flex",flexDirection:"column",alignItems:"flex-start",gap:2}},h("div",{style:{fontSize:14}},q.icon),h("div",{style:{fontSize:11,fontWeight:700,color:q.color}},q.label),h("div",{style:{fontSize:10,color:C.muted}},q.sub));})
+        QUADRANTS.filter(function(q){return q.id!=="chari";}).map(function(q){return h("button",{key:q.id,onClick:function(){aQ(cur.id,q.id);},style:{padding:"11px 8px",borderRadius:12,cursor:"pointer",border:"2px solid "+q.color,background:q.bg,display:"flex",flexDirection:"column",alignItems:"flex-start",gap:2}},h("div",{style:{fontSize:14}},q.icon),h("div",{style:{fontSize:11,fontWeight:700,color:q.color}},q.label),h("div",{style:{fontSize:10,color:C.muted}},q.sub));})
       ),
       h("div",{style:{background:C.pL,border:"1px solid "+C.purple+"33",borderRadius:10,padding:12}},
         h("div",{style:{fontSize:12,fontWeight:700,color:C.purple,marginBottom:8}},"🎓 Déléguer mais Chari ne sait pas encore ?"),
@@ -748,7 +749,7 @@ function Matrix(p){
     ),
     h("div",{style:{fontSize:11,color:C.muted,textAlign:"center"}},"💡 Glisse les cartes · Clic ✏️ pour editer"),
     h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
-      QUADRANTS.filter(function(q){return q.id!=="wait";}).map(function(q){return renderQuadrant(q);})
+      QUADRANTS.filter(function(q){return q.id!=="wait"&&q.id!=="chari";}).map(function(q){return renderQuadrant(q);})
     ),
     (function(){
       var wItems=getQItems("wait");
@@ -822,6 +823,113 @@ function Matrix(p){
               )
             );
           })
+        )
+      );
+    })(),
+    (function(){
+      var cItems=getQItems("chari");
+      var io=dO==="chari";
+      var openC=cItems.filter(function(x){return!x.doneDate;});
+      var doneC=cItems.filter(function(x){return x.doneDate&&x.doneDate>=getWeekStart();});
+      var isExp=doneExp["chari"];
+      return h("div",{
+        onDragOver:function(e){e.preventDefault();setDO("chari");},
+        onDragLeave:function(){setDO(null);},
+        onDrop:function(e){onDrop(e,"chari");},
+        style:{background:io?C.pL+"dd":C.surface,border:(io?"2":"1")+"px solid "+(io?C.purple:C.border),borderTop:"3px solid "+C.purple,borderRadius:12,padding:12,transition:"all 0.15s"}},
+        h(R,{style:{marginBottom:3}},
+          h("span",null,"🟣"),
+          h("div",null,
+            h("div",{style:{fontSize:10,fontWeight:700,color:C.purple}},"TÂCHES CHARI"),
+            h("div",{style:{fontSize:10,color:C.muted}},"Philippe dépose ici — Chari traite avec deadline")
+          ),
+          h("span",{style:{marginLeft:"auto",fontSize:11,fontWeight:700,color:C.purple}},openC.length)
+        ),
+        h("div",{style:{borderTop:"1px solid "+C.border,marginTop:8,paddingTop:8,display:"flex",flexDirection:"column",gap:6}},
+          openC.length===0&&doneC.length===0&&h("div",{style:{fontSize:11,color:C.muted,fontStyle:"italic",padding:"6px 0",textAlign:"center"}},"Philippe glisse ici les tâches pour Chari"),
+          openC.map(function(item){
+            var np=!item.planDate&&!item.doneDate;
+            return h("div",{key:item.id,draggable:true,
+              onDragStart:function(e){setDId(item.id);e.dataTransfer.effectAllowed="move";},
+              onDragEnd:function(){setDId(null);setDO(null);},
+              style:{borderRadius:8,background:np?"#F5F0FC":C.pL,border:"1px "+(np?"dashed "+C.purple:"solid transparent"),padding:"8px 10px",cursor:"grab",opacity:dId===item.id?0.4:1}},
+              h(R,{style:{alignItems:"flex-start",gap:6}},
+                h("button",{onClick:function(){togD(item.id);},
+                  style:{marginTop:2,width:17,height:17,minWidth:17,borderRadius:4,
+                    border:"2px solid "+(item.doneDate?C.success:C.purple),
+                    background:item.doneDate?C.success:"transparent",
+                    cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}},
+                  item.doneDate&&h("span",{style:{color:"#fff",fontSize:10,fontWeight:900}},"✓")
+                ),
+                h("div",{style:{flex:1,minWidth:0}},
+                  editId===item.id
+                    ?h(Cl,{gap:5},
+                        h("input",{value:editText,onChange:function(e){setEditText(e.target.value);},
+                          onKeyDown:function(e){if(e.key==="Enter")saveEdit(item.id);if(e.key==="Escape")setEditId(null);},
+                          autoFocus:true,
+                          style:{width:"100%",padding:"5px 8px",border:"2px solid "+C.purple,borderRadius:6,fontSize:12,outline:"none",color:C.text}}),
+                        h(R,{gap:5},
+                          h(Btn,{onClick:function(){saveEdit(item.id);},style:{fontSize:11,padding:"3px 9px"}},"OK"),
+                          h(Btn,{variant:"ghost",onClick:function(){setEditId(null);},style:{fontSize:11,padding:"3px 9px"}},"Annuler")
+                        )
+                      )
+                    :h(Fragment,null,
+                        h("div",{style:{fontSize:13,fontWeight:600,color:C.text,lineHeight:1.4}},item.text),
+                        h("div",{style:{display:"flex",gap:6,marginTop:5,alignItems:"center",flexWrap:"wrap"}},
+                          h("span",{style:{fontSize:10,color:C.purple,fontWeight:700,whiteSpace:"nowrap"}},"📅 Deadline :"),
+                          h("input",{type:"date",value:item.planDate||"",
+                            onChange:function(e){setPD(item.id,e.target.value);},
+                            style:{padding:"3px 7px",border:"1px solid "+(np?C.purple:C.border),borderRadius:6,fontSize:12,
+                              background:np?"white":C.surface,color:C.text,outline:"none",
+                              fontWeight:item.planDate?"600":"400"}}),
+                          item.planDate&&h(Tag,{color:item.planDate<=tStr()?C.stale:C.purple},
+                            (item.planDate<=tStr()?"🔔 ":"📅 ")+fDate(item.planDate)),
+                          item.addedDate&&h("span",{style:{fontSize:10,color:C.muted}},"ajouté: "+fDate(item.addedDate))
+                        )
+                      )
+                ),
+                h("div",{style:{display:"flex",flexDirection:"column",gap:3}},
+                  h("button",{onClick:function(){setEditId(item.id);setEditText(item.text);},
+                    title:"Éditer",style:{background:"none",border:"none",cursor:"pointer",fontSize:11,color:C.muted,padding:0}},"✏️"),
+                  h("button",{onClick:function(){setMM(item);},
+                    style:{background:"none",border:"none",cursor:"pointer",fontSize:11,color:C.muted,padding:0}},"↕"),
+                  h("button",{onClick:function(){rmI(item.id);},
+                    style:{background:"none",border:"none",cursor:"pointer",fontSize:13,color:C.muted,padding:0}},"×")
+                )
+              )
+            );
+          }),
+          doneC.length>0&&h("div",{style:{marginTop:openC.length>0?8:0}},
+            h("button",{onClick:function(){togDoneExp("chari");},
+              style:{width:"100%",background:"none",border:"none",cursor:"pointer",
+                display:"flex",alignItems:"center",gap:6,padding:"5px 4px",
+                borderTop:"1px dashed "+C.border,color:C.muted}},
+              h("span",{style:{fontSize:11}},isExp?"▾":"▸"),
+              h("span",{style:{fontSize:11,color:C.success,fontWeight:600}},
+                "✅ "+doneC.length+" terminée"+(doneC.length>1?"s":"")),
+              h("span",{style:{fontSize:10,color:C.muted,marginLeft:"auto"}},isExp?"masquer":"voir")
+            ),
+            isExp&&h("div",{style:{display:"flex",flexDirection:"column",gap:4,marginTop:4}},
+              doneC.map(function(item){
+                return h("div",{key:item.id,style:{borderRadius:6,background:C.sL,padding:"5px 8px",opacity:0.85}},
+                  h(R,{style:{alignItems:"center",gap:6}},
+                    h("button",{onClick:function(){togD(item.id);},
+                      style:{width:15,height:15,minWidth:15,borderRadius:3,
+                        border:"2px solid "+C.success,background:C.success,
+                        cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}},
+                      h("span",{style:{color:"#fff",fontSize:9,fontWeight:900}},"✓")
+                    ),
+                    h("div",{style:{flex:1}},
+                      h("div",{style:{fontSize:11,color:C.muted,textDecoration:"line-through"}},item.text),
+                      item.planDate&&h("span",{style:{fontSize:10,color:C.muted}},"deadline: "+fDate(item.planDate))
+                    ),
+                    h("button",{onClick:function(){rmI(item.id);},
+                      style:{background:"none",border:"none",cursor:"pointer",fontSize:12,color:C.muted,padding:0}},"×")
+                  )
+                );
+              })
+            )
+          )
         )
       );
     })(),
