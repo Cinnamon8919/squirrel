@@ -356,7 +356,58 @@ function BrainDump(p){
   if(phase==="sort"&&uns.length>0){
     var cur=uns[0],rc=p.items.filter(function(x){return x.quadrant==="do";}).length;
     var prog=p.items.length>0?tot/p.items.length:0;
-    return h(Cl,{gap:12},
+    function renderPlanWithDate(){
+    var dated=p.items.filter(function(x){return x.quadrant==="plan"&&x.planDate&&!x.doneDate;});
+    dated=dated.slice().sort(function(a,b){return a.planDate<b.planDate?-1:1;});
+    var doneItems=p.items.filter(function(x){return x.quadrant==="plan"&&x.doneDate&&x.doneDate>=weekStart;});
+    var io=dO==="plan-dated";
+    var q=QUADRANTS.find(function(q){return q.id==="plan";});
+    return h("div",{
+      onDragOver:function(e){e.preventDefault();setDO("plan-dated");},
+      onDragLeave:function(){setDO(null);},
+      onDrop:function(e){e.preventDefault();if(!dId)return;p.setItems(function(items){return items.map(function(x){return x.id===dId?Object.assign({},x,{quadrant:"plan"}):x;});});setDId(null);setDO(null);},
+      style:{background:io?C.aL+"dd":C.surface,border:(io?"2":"1")+"px solid "+(io?C.accent:C.border),borderTop:"3px solid "+C.accent,borderRadius:12,padding:10,transition:"all 0.15s",minWidth:0}},
+      h(R,{style:{marginBottom:3}},
+        h("span",{style:{fontSize:12}},"🔵"),
+        h("div",{style:{flex:1,minWidth:0}},
+          h("div",{style:{fontSize:9,fontWeight:700,color:C.accent,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},"PLANIFIÉ — avec date"),
+          h("div",{style:{fontSize:9,color:C.muted}},"Trié par date")
+        ),
+        h("span",{style:{fontSize:11,fontWeight:700,color:C.accent,flexShrink:0}},dated.length)
+      ),
+      h("div",{style:{borderTop:"1px solid "+C.border,marginTop:6,paddingTop:6,display:"flex",flexDirection:"column",gap:4}},
+        dated.length===0&&doneItems.length===0&&h("div",{style:{fontSize:10,color:C.muted,fontStyle:"italic",padding:"4px 0",textAlign:"center"}},"Aucune tache datee"),
+        dated.map(function(item){return renderItem(item,q);}),
+        renderDoneSection("plan-dated",doneItems,C.accent)
+      )
+    );
+  }
+
+  function renderPlanNoDate(){
+    var undated=p.items.filter(function(x){return x.quadrant==="plan"&&!x.planDate&&!x.doneDate;});
+    var io=dO==="plan-nodated";
+    var q=QUADRANTS.find(function(q){return q.id==="plan";});
+    return h("div",{
+      onDragOver:function(e){e.preventDefault();setDO("plan-nodated");},
+      onDragLeave:function(){setDO(null);},
+      onDrop:function(e){e.preventDefault();if(!dId)return;p.setItems(function(items){return items.map(function(x){return x.id===dId?Object.assign({},x,{quadrant:"plan",planDate:null}):x;});});setDId(null);setDO(null);},
+      style:{background:io?"#DBEAFE":C.surface,border:(io?"2":"1")+"px solid "+(io?"#60A5FA":C.border),borderTop:"3px dashed "+C.accent,borderRadius:12,padding:10,transition:"all 0.15s",minWidth:0}},
+      h(R,{style:{marginBottom:3}},
+        h("span",{style:{fontSize:12}},"📌"),
+        h("div",{style:{flex:1,minWidth:0}},
+          h("div",{style:{fontSize:9,fontWeight:700,color:C.accent,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},"À PLANIFIER"),
+          h("div",{style:{fontSize:9,color:C.muted}},"Pas encore de date")
+        ),
+        h("span",{style:{fontSize:11,fontWeight:700,color:C.accent,flexShrink:0}},undated.length)
+      ),
+      h("div",{style:{borderTop:"1px solid "+C.border,marginTop:6,paddingTop:6,display:"flex",flexDirection:"column",gap:4}},
+        undated.length===0&&h("div",{style:{fontSize:10,color:C.muted,fontStyle:"italic",padding:"4px 0",textAlign:"center"}},""),
+        undated.map(function(item){return renderItem(item,q);})
+      )
+    );
+  }
+
+  return h(Cl,{gap:12},
       h("div",{style:{background:C.surface,border:"1px solid "+C.border,borderRadius:12,padding:14}},
         h(R,{style:{justifyContent:"space-between",fontSize:12,color:C.muted,marginBottom:6}},h("span","Tri en cours"),h("span",tot+"/"+p.items.length)),
         h("div",{style:{height:6,background:C.bg,borderRadius:3,overflow:"hidden"}},h("div",{style:{height:"100%",width:(prog*100)+"%",borderRadius:3,background:"linear-gradient(90deg,"+C.accent+","+C.success+")",transition:"width 0.3s"}}))
@@ -857,8 +908,12 @@ function Matrix(p){
     ),
     bee&&h(R,{style:{background:"linear-gradient(135deg,#FBF5E0,#FFF9F0)",border:"2px solid "+C.gold,borderRadius:14,padding:"12px 16px",gap:14}},h("span",{style:{fontSize:32}},"🐝"),h("div",null,h("div",{style:{fontWeight:700,color:C.gold,fontSize:14}},"Mode Abeille active !"),h("div",{style:{color:C.muted,fontSize:12,marginTop:2}},"Les essentiels sont faits. Philippe vole librement."))),
     h("div",{style:{fontSize:11,color:C.muted,textAlign:"center"}},"💡 Glisse les cartes · ✏️ pour editer"),
-    h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,overflowX:"auto"}},
-      QUADRANTS.filter(function(q){return q.id!=="wait"&&q.id!=="chari"&&q.id!=="perso";}).map(function(q){return renderQuadrant(q);})
+    h("div",{style:{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:8}},
+      renderQuadrant(QUADRANTS.find(function(q){return q.id==="do";})),
+      renderPlanWithDate(),
+      renderPlanNoDate(),
+      renderQuadrant(QUADRANTS.find(function(q){return q.id==="deleg";})),
+      renderQuadrant(QUADRANTS.find(function(q){return q.id==="drop";}))
     ),
     h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},
       renderWaitingSection(),
@@ -1342,7 +1397,7 @@ function App(){
         TABS.map(function(t){return h("button",{key:t.id,onClick:function(){setTab(t.id);},style:{padding:"10px 14px",background:"none",border:"none",borderBottom:"3px solid "+(tab===t.id?C.accent:"transparent"),color:tab===t.id?C.accent:C.muted,fontWeight:tab===t.id?700:500,fontSize:13,cursor:"pointer",whiteSpace:"nowrap"}},t.label);})
       )
     ),
-    h("div",{style:{maxWidth:760,margin:"0 auto",padding:"18px 14px"}},
+    h("div",{style:{maxWidth:tab==="matrix"?"100%":760,margin:"0 auto",padding:tab==="matrix"?"12px 12px":"18px 14px"}},
       showMig&&h(MigrationBanner,{onDone:function(){setShowMig(false);}}),
       showRecovery&&h(RecoveryPanel,{onDone:function(){setShowRecovery(false);}}),
       tab==="focus"    &&h(Focus,{intention:intention,setIntention:setIntention}),
