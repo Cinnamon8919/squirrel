@@ -729,8 +729,8 @@ function Matrix(p){
         h("span",{style:{marginLeft:"auto",fontSize:11,fontWeight:700,color:C.orange}},wItems.filter(function(x){return!x.doneDate;}).length)
       ),
       h("div",{style:{borderTop:"1px solid "+C.border,marginTop:6,paddingTop:6,display:"flex",flexDirection:"column",gap:5}},
-        wItems.length===0&&h("div",{style:{fontSize:10,color:C.muted,fontStyle:"italic",padding:"4px 0",textAlign:"center"}},"Rien en attente"),
-        wItems.map(function(item){
+        wItems.filter(function(x){return!x.doneDate;}).length===0&&wItems.filter(function(x){return x.doneDate;}).length===0&&h("div",{style:{fontSize:10,color:C.muted,fontStyle:"italic",padding:"4px 0",textAlign:"center"}},"Rien en attente"),
+        wItems.filter(function(item){return!item.doneDate;}).map(function(item){
           return h("div",{key:item.id,draggable:true,
             onDragStart:function(e){setDId(item.id);e.dataTransfer.effectAllowed="move";},
             onDragEnd:function(){setDId(null);setDO(null);},
@@ -759,7 +759,11 @@ function Matrix(p){
                   )
                 )
           );
-        })
+        }),
+        (function(){
+          var doneW=wItems.filter(function(x){return x.doneDate&&x.doneDate>=weekStart;});
+          return renderDoneSection("wait",doneW);
+        })()
       )
     );
   }
@@ -857,28 +861,7 @@ function Matrix(p){
   }
 
   return h(Cl,{gap:12},
-    h("div",{style:{background:"linear-gradient(135deg,#FBF5E0,#FFF9F0)",border:"2px solid "+C.gold,borderRadius:14,padding:14}},
-      h(R,{style:{justifyContent:"space-between",marginBottom:10}},
-        h("div",{style:{fontSize:13,fontWeight:700,color:C.gold}},"🌅 Rituel du matin"),
-        h("div",{style:{fontSize:11,color:C.muted}},"Faire dans l'ordre")
-      ),
-      h("div",{style:{display:"flex",flexDirection:"column",gap:5}},
-        [{icon:"🧠",text:"Vider la tête",sub:"Onglet Vider la tête",tab:"braindump"},
-         {icon:"📅",text:"Regarder l'agenda d'aujourd'hui",sub:"Vérifier rendez-vous du jour",tab:null},
-         {icon:"🔴",text:"Tâches planifiées pour aujourd'hui ?",sub:"Ci-dessous — déplacer vers Urgent si nécessaire",tab:null},
-         {icon:"🎓",text:"Temps pour apprendre ensemble ?",sub:"Sessions d'observation dans Planifier",tab:null}
-        ].map(function(step,i){
-          return h("div",{key:i,style:{display:"flex",alignItems:"flex-start",gap:10,padding:"6px 10px",background:"rgba(255,255,255,0.6)",borderRadius:8}},
-            h("div",{style:{minWidth:20,height:20,borderRadius:"50%",background:C.gold,color:"#fff",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},i+1),
-            h("div",{style:{flex:1}},
-              h(R,{gap:5},h("span",{style:{fontSize:13}},step.icon),h("div",{style:{fontWeight:600,fontSize:12,color:C.text}},step.text)),
-              h("div",{style:{fontSize:10,color:C.muted,marginTop:1,marginLeft:20}},step.sub)
-            ),
-            step.tab&&h("button",{onClick:function(){p.setTab(step.tab);},style:{fontSize:11,color:C.accent,background:"none",border:"1px solid "+C.aL,borderRadius:6,padding:"2px 7px",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}},"Aller →")
-          );
-        })
-      )
-    ),
+
     dueToday.length>0&&h("div",{style:{background:C.oL,border:"2px solid "+C.orange,borderRadius:12,padding:12}},
       h("div",{style:{fontSize:13,fontWeight:700,color:C.orange,marginBottom:8}},"📅 "+dueToday.length+" tâche(s) planifiée(s) pour aujourd'hui ou en retard"),
       dueToday.map(function(item){
@@ -911,18 +894,20 @@ function Matrix(p){
     ),
     bee&&h(R,{style:{background:"linear-gradient(135deg,#FBF5E0,#FFF9F0)",border:"2px solid "+C.gold,borderRadius:14,padding:"12px 16px",gap:14}},h("span",{style:{fontSize:32}},"🐝"),h("div",null,h("div",{style:{fontWeight:700,color:C.gold,fontSize:14}},"Mode Abeille active !"),h("div",{style:{color:C.muted,fontSize:12,marginTop:2}},"Les essentiels sont faits. Philippe vole librement."))),
     h("div",{style:{fontSize:11,color:C.muted,textAlign:"center"}},"💡 Glisse les cartes · ✏️ pour éditer"),
-    h("div",{style:{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:8}},
+    h("div",{style:{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8}},
       renderQuadrant(QUADRANTS.find(function(q){return q.id==="do";})),
       renderPlanWithDate(),
       renderPlanNoDate(),
-      renderQuadrant(QUADRANTS.find(function(q){return q.id==="deleg";})),
-      renderQuadrant(QUADRANTS.find(function(q){return q.id==="drop";}))
+      renderQuadrant(QUADRANTS.find(function(q){return q.id==="deleg";}))
     ),
     h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},
       renderWaitingSection(),
       renderChariSection()
     ),
-    renderPersoSection(),
+    h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},
+      renderPersoSection(),
+      renderQuadrant(QUADRANTS.find(function(q){return q.id==="drop";}))
+    ),
     mm&&h(Modal,null,
       h("div",{style:{fontWeight:700,fontSize:14,marginBottom:8}},"Déplacer vers..."),
       h("div",{style:{fontSize:13,color:C.muted,background:C.bg,borderRadius:8,padding:"7px 10px",marginBottom:12}},mm.text),
@@ -1399,7 +1384,7 @@ function App(){
         TABS.map(function(t){return h("button",{key:t.id,onClick:function(){setTab(t.id);},style:{padding:"10px 14px",background:"none",border:"none",borderBottom:"3px solid "+(tab===t.id?C.accent:"transparent"),color:tab===t.id?C.accent:C.muted,fontWeight:tab===t.id?700:500,fontSize:13,cursor:"pointer",whiteSpace:"nowrap"}},t.label);})
       )
     ),
-    h("div",{style:{maxWidth:tab==="matrix"?"100%":760,margin:"0 auto",padding:tab==="matrix"?"12px 12px":"18px 14px"}},
+    h("div",{style:{maxWidth:tab==="matrix"?"75%":760,margin:"0 auto",padding:tab==="matrix"?"12px 12px":"18px 14px"}},
       showMig&&h(MigrationBanner,{onDone:function(){setShowMig(false);}}),
       showRecovery&&h(RecoveryPanel,{onDone:function(){setShowRecovery(false);}}),
       tab==="focus"    &&h(Focus,{intention:intention,setIntention:setIntention}),
