@@ -1479,7 +1479,11 @@ function App(){
     h(QuickCapture,{onAdd:function(item){setItems(function(i){return i.concat([item]);}  );}})
   );
 }
-ReactDOM.createRoot(document.getElementById("root")).render(h(App,null));
+try {
+  ReactDOM.createRoot(document.getElementById("root")).render(h(App,null));
+} catch(e) {
+  document.getElementById("root").innerHTML = '<div style="padding:40px;font-family:monospace;color:red;background:#fff"><h2>Erreur de chargement</h2><pre>' + e.message + '\n' + e.stack + '</pre></div>';
+}
 })();
 </script>
 </body>
