@@ -305,34 +305,34 @@ function BrainDump(p){
   var s1=useState("todo"),cat=s1[0],setCat=s1[1];
   var s2=useState("dump"),phase=s2[0],setPhase=s2[1];
   var s3=useState("all"),filter=s3[0],setFilter=s3[1];
-  var s4=useState(null),reassign=s4[0],setReassign=s4[1];
-  var s5=useState(false),showNewCat=s5[0],setShowNewCat=s5[1];
-  var s6=useState(""),newCatName=s6[0],setNewCatName=s6[1];
-  var s7=useState("🎯"),newCatIcon=s7[0],setNewCatIcon=s7[1];
-  var s8=useState(PALETTE[0]),newCatColor=s8[0],setNewCatColor=s8[1];
+  var s4=useState(false),showNewCat=s4[0],setShowNewCat=s4[1];
+  var s5=useState(""),newCatName=s5[0],setNewCatName=s5[1];
+  var s6=useState("💡"),newCatIcon=s6[0],setNewCatIcon=s6[1];
+  var s7=useState("#6366F1"),newCatColor=s7[0],setNewCatColor=s7[1];
+  var s8=useState(null),reassign=s8[0],setReassign=s8[1];
 
-  function cC(id){var x=dumpCats.find(function(c){return c.id===id;});return x?x.color:C.muted;}
-  function cL(id){var x=dumpCats.find(function(c){return c.id===id;});return x?x.label:id;}
-  function cI(id){var x=dumpCats.find(function(c){return c.id===id;});return x?x.icon:"💭";}
+  function cC(catId){var c=dumpCats.find(function(x){return x.id===catId;});return c?c.color:"#6366F1";}
+  function cI(catId){var c=dumpCats.find(function(x){return x.id===catId;});return c?c.icon:"💡";}
+  function cL(catId){var c=dumpCats.find(function(x){return x.id===catId;});return c?c.label:"Autre";}
+
+  function addItem(){
+    if(!input.trim())return;
+    var lines=input.split("\n").map(function(l){return l.trim();}).filter(Boolean);
+    p.setItems(function(items){return items.concat(lines.map(function(l){return{text:l,cat:cat,id:uid(),quadrant:null,subStatus:null,addedDate:tStr(),doneDate:null,planDate:null,notes:"",twoMin:false,waitingFor:"",lastAction:null,editMode:false};}));});
+    setInput("");
+  }
 
   function addCat(){
     if(!newCatName.trim())return;
-    setDumpCats(function(cats){return cats.concat([{id:"c_"+uid(),label:newCatName.trim(),icon:newCatIcon,color:newCatColor}]);});
-    setCat(dumpCats.length>0?dumpCats[dumpCats.length-1].id:"todo");
+    var nc={id:"c_"+uid(),label:newCatName.trim(),icon:newCatIcon,color:newCatColor};
+    setDumpCats(function(cats){return cats.concat([nc]);});
     setNewCatName("");setShowNewCat(false);
   }
 
-  function addItem(){
-    var lines=input.split("\n").map(function(l){return l.trim();}).filter(Boolean);
-    if(!lines.length)return;
-    p.setItems(function(items){return items.concat(lines.map(function(text){return{text:text,cat:cat,id:uid(),quadrant:null,subStatus:null,addedDate:tStr(),doneDate:null,planDate:null,notes:"",twoMin:false,waitingFor:"",editMode:false};}));});
-    setInput("");
-  }
   function aQ(id,q,sub){
     var item=p.items.find(function(x){return x.id===id;});
     p.setItems(function(items){
       var updated=items.map(function(x){return x.id===id?Object.assign({},x,{quadrant:q,subStatus:sub||null}):x;});
-      // If marking as toLearn, also create observation card in Planifier
       if(sub==="toLearn"&&item){
         var alreadyHasObs=updated.some(function(x){return x.subStatus==="observationSession"&&x.text.indexOf(item.text)>-1;});
         if(!alreadyHasObs){
@@ -341,7 +341,6 @@ function BrainDump(p){
       }
       return updated;
     });
-    // If toLearn, also add to handover passation
     if(sub==="toLearn"&&item){
       p.setHandover(function(t){
         if(t.some(function(h){return h.task===item.text;}))return t;
@@ -354,8 +353,130 @@ function BrainDump(p){
   var tot=p.items.filter(function(x){return x.quadrant!==null;}).length;
 
   if(phase==="sort"&&uns.length>0){
-    var cur=uns[0],rc=p.items.filter(function(x){return x.quadrant==="do";}).length;
+    var cur=uns[0];
     var prog=p.items.length>0?tot/p.items.length:0;
+    return h(Cl,{gap:12},
+      h("div",{style:{background:C.surface,border:"1px solid "+C.border,borderRadius:12,padding:14}},
+        h(R,{style:{justifyContent:"space-between",fontSize:12,color:C.muted,marginBottom:6}},h("span","Tri en cours"),h("span",tot+"/"+p.items.length)),
+        h("div",{style:{height:6,background:C.bg,borderRadius:3,overflow:"hidden"}},h("div",{style:{height:"100%",width:(prog*100)+"%",borderRadius:3,background:"linear-gradient(90deg,"+C.accent+","+C.success+")",transition:"width 0.3s"}}))
+      ),
+      h("div",{style:{background:C.surface,border:"2px solid "+cC(cur.cat),borderRadius:16,padding:24,textAlign:"center"}},
+        h("div",{style:{display:"inline-flex",alignItems:"center",gap:6,background:cC(cur.cat)+"22",color:cC(cur.cat),padding:"4px 12px",borderRadius:20,fontSize:11,fontWeight:700,marginBottom:14}},cI(cur.cat)+" "+cL(cur.cat)),
+        h("div",{style:{fontSize:18,fontWeight:700,lineHeight:1.4,marginBottom:6}},cur.text),
+        h("div",{style:{fontSize:12,color:C.muted}},"Où va cet élément ?")
+      ),
+      h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
+        QUADRANTS.filter(function(q){return q.id!=="chari"&&q.id!=="perso";}).map(function(q){
+          return h("button",{key:q.id,onClick:function(){aQ(cur.id,q.id);},style:{padding:"11px 8px",borderRadius:12,cursor:"pointer",border:"2px solid "+q.color,background:q.bg,display:"flex",flexDirection:"column",alignItems:"flex-start",gap:2}},
+            h("div",{style:{fontSize:14}},q.icon),
+            h("div",{style:{fontSize:11,fontWeight:700,color:q.color}},q.label),
+            h("div",{style:{fontSize:10,color:C.muted}},q.sub)
+          );
+        })
+      ),
+      h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
+        h("button",{onClick:function(){aQ(cur.id,"chari");},style:{padding:"10px 8px",borderRadius:12,cursor:"pointer",border:"2px solid "+C.purple,background:C.pL,display:"flex",flexDirection:"column",alignItems:"flex-start",gap:2}},
+          h("div",{style:{fontSize:14}},"🟣"),
+          h("div",{style:{fontSize:11,fontWeight:700,color:C.purple}},"TACHES CHARI"),
+          h("div",{style:{fontSize:10,color:C.muted}},"A faire par Chari")
+        ),
+        h("button",{onClick:function(){aQ(cur.id,"perso");},style:{padding:"10px 8px",borderRadius:12,cursor:"pointer",border:"2px solid #0F766E",background:"#F0FDFA",display:"flex",flexDirection:"column",alignItems:"flex-start",gap:2}},
+          h("div",{style:{fontSize:14}},"🏠"),
+          h("div",{style:{fontSize:11,fontWeight:700,color:"#0F766E"}},"PERSO"),
+          h("div",{style:{fontSize:10,color:C.muted}},"Tache personnelle")
+        )
+      ),
+      h("div",{style:{background:C.pL,border:"1px solid "+C.purple+"33",borderRadius:10,padding:12}},
+        h("div",{style:{fontSize:12,fontWeight:700,color:C.purple,marginBottom:8}},"🎓 Déléguer mais Chari ne sait pas encore ?"),
+        h("button",{onClick:function(){aQ(cur.id,"deleg","toLearn");},style:{padding:"7px 14px",background:C.purple,color:"#fff",border:"none",borderRadius:8,fontWeight:600,fontSize:12,cursor:"pointer"}},"Déléguer — À former d'abord")
+      ),
+      h(Btn,{variant:"ghost",onClick:function(){setPhase("dump");},style:{fontSize:12}},"← Pause")
+    );
+  }
+
+  if(phase==="sort"&&uns.length===0){
+    return h(Cl,{gap:12},
+      h("div",{style:{background:C.sL,border:"2px solid "+C.success,borderRadius:14,padding:20,textAlign:"center"}},
+        h("div",{style:{fontSize:32,marginBottom:6}},"✅"),
+        h("div",{style:{fontWeight:700,fontSize:16,color:C.success}},"Tout est trié !"),
+        h("div",{style:{color:C.muted,fontSize:12,marginTop:3}},"Clique déplacer pour réviser")
+      ),
+      QUADRANTS.map(function(q){
+        var qi=p.items.filter(function(x){return x.quadrant===q.id;});if(!qi.length)return null;
+        return h("div",{key:q.id,style:{background:C.surface,border:"1px solid "+C.border,borderTop:"3px solid "+q.color,borderRadius:12,padding:14}},
+          h("div",{style:{fontSize:12,fontWeight:700,color:q.color,marginBottom:10}},q.icon+" "+q.label+" — "+qi.length),
+          qi.map(function(item){
+            return h(R,{key:item.id,style:{padding:"5px 8px",background:q.bg,borderRadius:7,marginBottom:4}},
+              h("span",{style:{fontSize:12}},cI(item.cat)),
+              h("span",{style:{flex:1,fontSize:13}},item.text),
+              item.subStatus==="toLearn"&&h(Tag,{color:C.purple},"🎓 À former"),
+              h("button",{onClick:function(){setReassign(item);},style:{background:"none",border:"1px solid "+C.border,borderRadius:5,padding:"2px 7px",fontSize:11,color:C.muted,cursor:"pointer"}},"déplacer"),
+              h("button",{onClick:function(){p.setItems(function(items){return items.filter(function(x){return x.id!==item.id;});});},style:{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:15}},"×")
+            );
+          })
+        );
+      }),
+      reassign&&h(Modal,null,
+        h("div",{style:{fontWeight:700,fontSize:14,marginBottom:8}},"Déplacer vers…"),
+        h(Cl,{gap:7},QUADRANTS.map(function(q){
+          return h("button",{key:q.id,onClick:function(){aQ(reassign.id,q.id);setReassign(null);},style:{padding:"10px 14px",borderRadius:10,border:"2px solid "+q.color,background:q.bg,color:q.color,fontWeight:700,fontSize:13,cursor:"pointer",textAlign:"left"}},q.icon+" "+q.label);
+        })),
+        h(Btn,{variant:"ghost",onClick:function(){setReassign(null);},style:{marginTop:10,width:"100%"}},"Annuler")
+      ),
+      h(Btn,{onClick:function(){setPhase("dump");}},"← Retour au vide-tête")
+    );
+  }
+
+  var fi=(filter==="all"?p.items:p.items.filter(function(i){return i.cat===filter;})).filter(function(i){return i.quadrant===null;});
+  var sortedCount=p.items.filter(function(i){return i.quadrant!==null;}).length;
+
+  return h(Cl,{gap:14},
+    h("div",{style:{background:"linear-gradient(135deg,#EBF0FD,#F5F4F0)",border:"1px solid #C5D3F7",borderRadius:14,padding:16}},
+      h("div",{style:{fontSize:15,fontWeight:700,marginBottom:4}},"🧠 Vide-tête de Philippe"),
+      h("div",{style:{fontSize:13,color:C.muted,lineHeight:1.6}},"Pas de jugement. Le tri vient après.")
+    ),
+    h("div",{style:{background:C.surface,border:"1px solid "+C.border,borderRadius:14,padding:16}},
+      h("textarea",{value:input,onChange:function(e){setInput(e.target.value);},rows:5,placeholder:"Une idée par ligne.\n\nex: Rappeler Martin\nex: Fiche conseil Dupont",style:{width:"100%",padding:"11px 13px",border:"1px solid "+C.border,borderRadius:10,fontSize:14,background:C.bg,lineHeight:1.6,fontFamily:"inherit",color:C.text}}),
+      h("div",{style:{display:"flex",gap:6,marginTop:10,flexWrap:"wrap",alignItems:"center"}},
+        dumpCats.map(function(c){return h("button",{key:c.id,onClick:function(){setCat(c.id);},style:{padding:"5px 10px",borderRadius:20,fontSize:12,fontWeight:600,border:"2px solid "+(cat===c.id?c.color:C.border),background:cat===c.id?c.color+"22":C.surface,color:cat===c.id?c.color:C.muted,cursor:"pointer"}},c.icon+" "+c.label);}),
+        h("button",{onClick:function(){setShowNewCat(true);},style:{padding:"5px 10px",borderRadius:20,fontSize:12,border:"2px dashed "+C.border,background:"none",color:C.muted,cursor:"pointer"}},"+ Catégorie")
+      ),
+      h(Btn,{onClick:addItem,style:{marginTop:10,width:"100%",padding:"11px",fontSize:14}},"Ajouter à la liste")
+    ),
+    showNewCat&&h(Modal,null,
+      h("div",{style:{fontWeight:700,fontSize:15,marginBottom:14}},"Nouvelle catégorie"),
+      h("div",{style:{fontSize:11,fontWeight:700,color:C.muted,marginBottom:5}},"NOM"),
+      h("input",{value:newCatName,onChange:function(e){setNewCatName(e.target.value);},placeholder:"ex: Équipe, Juridique...",autoFocus:true,style:{width:"100%",padding:"9px 12px",border:"1px solid "+C.border,borderRadius:8,fontSize:13,marginBottom:12,outline:"none",color:C.text}}),
+      h("div",{style:{fontSize:11,fontWeight:700,color:C.muted,marginBottom:5}},"ICÔNE"),
+      h("div",{style:{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}},CAT_ICONS.map(function(ic){return h("button",{key:ic,onClick:function(){setNewCatIcon(ic);},style:{fontSize:18,padding:4,borderRadius:6,border:"2px solid "+(newCatIcon===ic?C.accent:C.border),background:newCatIcon===ic?C.aL:"none",cursor:"pointer"}},ic);})),
+      h("div",{style:{fontSize:11,fontWeight:700,color:C.muted,marginBottom:5}},"COULEUR"),
+      h("div",{style:{display:"flex",gap:8,marginBottom:16}},PALETTE.map(function(col){return h("button",{key:col,onClick:function(){setNewCatColor(col);},style:{width:26,height:26,borderRadius:"50%",background:col,border:"3px solid "+(newCatColor===col?C.text:"transparent"),cursor:"pointer"}});})),
+      h(R,{gap:8},h(Btn,{onClick:addCat,style:{flex:1}},"Créer"),h(Btn,{variant:"ghost",onClick:function(){setShowNewCat(false);},style:{flex:1}},"Annuler"))
+    ),
+    p.items.length>0&&h(Fragment,null,
+      h(R,{style:{justifyContent:"space-between",flexWrap:"wrap",gap:8}},
+        h("div",{style:{display:"flex",gap:5,flexWrap:"wrap"}},
+          h("button",{onClick:function(){setFilter("all");},style:{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,border:"1px solid "+(filter==="all"?C.accent:C.border),background:filter==="all"?C.aL:C.surface,color:filter==="all"?C.accent:C.muted,cursor:"pointer"}},"À trier ("+fi.length+")"),
+          sortedCount>0&&h("span",{style:{fontSize:11,color:C.success,fontWeight:600}},"✅ "+sortedCount+" dans la matrice"),
+          dumpCats.filter(function(c){return p.items.some(function(i){return i.cat===c.id;});}).map(function(c){return h("button",{key:c.id,onClick:function(){setFilter(c.id);},style:{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,border:"1px solid "+(filter===c.id?c.color:C.border),background:filter===c.id?c.color+"22":C.surface,color:filter===c.id?c.color:C.muted,cursor:"pointer"}},c.icon+" "+p.items.filter(function(i){return i.cat===c.id;}).length);})
+        ),
+        h(Btn,{variant:"success",onClick:function(){setPhase("sort");}},"🎯 Trier dans la matrice →")
+      ),
+      h(Cl,{gap:5},fi.map(function(item){
+        return h(R,{key:item.id,style:{background:C.surface,border:"1px solid "+C.border,borderLeft:"4px solid "+cC(item.cat),borderRadius:8,padding:"8px 12px"}},
+          h("span",null,cI(item.cat)),
+          h("span",{style:{flex:1,fontSize:13}},item.text),
+          h("button",{onClick:function(){p.setItems(function(items){return items.filter(function(x){return x.id!==item.id;});});},style:{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:16,padding:0}},"×")
+        );
+      }))
+    ),
+    p.items.length===0&&h("div",{style:{background:C.surface,border:"1px dashed "+C.border,borderRadius:12,padding:40,textAlign:"center",color:C.muted}},
+      h("div",{style:{fontSize:36,marginBottom:8}},"🧠"),
+      h("div",{style:{fontSize:14}},"Page vide — parfait pour commencer")
+    )
+  );
+}
+
 
 function WaitingForField(p){
   var s0=useState(false),editing=s0[0],setEditing=s0[1];
@@ -804,58 +925,6 @@ return h(Cl,{gap:12},
 }
 if(phase==="sort"&&uns.length===0){
   return h(Cl,{gap:12},
-    h("div",{style:{background:C.sL,border:"2px solid "+C.success,borderRadius:14,padding:20,textAlign:"center"}},h("div",{style:{fontSize:32,marginBottom:6}},"✅"),h("div",{style:{fontWeight:700,fontSize:16,color:C.success}},"Tout est trié !"),h("div",{style:{color:C.muted,fontSize:12,marginTop:3}},"Clique déplacer pour réviser")),
-    QUADRANTS.map(function(q){
-      var qi=p.items.filter(function(x){return x.quadrant===q.id;});if(!qi.length)return null;
-      return h("div",{key:q.id,style:{background:C.surface,border:"1px solid "+C.border,borderTop:"3px solid "+q.color,borderRadius:12,padding:14}},
-        h("div",{style:{fontSize:12,fontWeight:700,color:q.color,marginBottom:10}},q.icon+" "+q.label+" — "+qi.length),
-        qi.map(function(item){return h(R,{key:item.id,style:{padding:"5px 8px",background:q.bg,borderRadius:7,marginBottom:4}},h("span",{style:{fontSize:12}},cI(item.cat)),h("span",{style:{flex:1,fontSize:13}},item.text),item.subStatus==="toLearn"&&h(Tag,{color:C.purple},"🎓 À former"),h("button",{onClick:function(){setReassign(item);},style:{background:"none",border:"1px solid "+C.border,borderRadius:5,padding:"2px 7px",fontSize:11,color:C.muted,cursor:"pointer"}},"déplacer"),h("button",{onClick:function(){p.setItems(function(items){return items.filter(function(x){return x.id!==item.id;});});},style:{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:15}},"×"));})
-      );
-    }),
-    reassign&&h(Modal,null,h("div",{style:{fontWeight:700,fontSize:14,marginBottom:8}},"Déplacer vers…"),h(Cl,{gap:7},QUADRANTS.map(function(q){return h("button",{key:q.id,onClick:function(){aQ(reassign.id,q.id);setReassign(null);},style:{padding:"10px 14px",borderRadius:10,border:"2px solid "+q.color,background:q.bg,color:q.color,fontWeight:700,fontSize:13,cursor:"pointer",textAlign:"left"}},q.icon+" "+q.label);})),h(Btn,{variant:"ghost",onClick:function(){setReassign(null);},style:{marginTop:10,width:"100%"}},"Annuler")),
-    h(Btn,{onClick:function(){setPhase("dump");}},"← Retour au vide-tête")
-  );
-}
-var fi=(filter==="all"?p.items:p.items.filter(function(i){return i.cat===filter;})).filter(function(i){return i.quadrant===null;});
-var sortedCount=p.items.filter(function(i){return i.quadrant!==null;}).length;
-return h(Cl,{gap:14},
-  h("div",{style:{background:"linear-gradient(135deg,#EBF0FD,#F5F4F0)",border:"1px solid #C5D3F7",borderRadius:14,padding:16}},h("div",{style:{fontSize:15,fontWeight:700,marginBottom:4}},"🧠 Vide-tête de Philippe"),h("div",{style:{fontSize:13,color:C.muted,lineHeight:1.6}},"Pas de jugement. Le tri vient après.")),
-  h("div",{style:{background:C.surface,border:"1px solid "+C.border,borderRadius:14,padding:16}},
-    h("textarea",{value:input,onChange:function(e){setInput(e.target.value);},rows:5,placeholder:"Une idée par ligne.\n\nex: Rappeler Martin\nex: Fiche conseil Dupont",style:{width:"100%",padding:"11px 13px",border:"1px solid "+C.border,borderRadius:10,fontSize:14,background:C.bg,lineHeight:1.6,fontFamily:"inherit",color:C.text}}),
-    h("div",{style:{display:"flex",gap:6,marginTop:10,flexWrap:"wrap",alignItems:"center"}},
-      dumpCats.map(function(c){return h("button",{key:c.id,onClick:function(){setCat(c.id);},style:{padding:"5px 10px",borderRadius:20,fontSize:12,fontWeight:600,border:"2px solid "+(cat===c.id?c.color:C.border),background:cat===c.id?c.color+"22":C.surface,color:cat===c.id?c.color:C.muted,cursor:"pointer"}},c.icon+" "+c.label);}),
-      h("button",{onClick:function(){setShowNewCat(true);},style:{padding:"5px 10px",borderRadius:20,fontSize:12,border:"2px dashed "+C.border,background:"none",color:C.muted,cursor:"pointer"}},"+ Catégorie")
-    ),
-    h(Btn,{onClick:addItem,style:{marginTop:10,width:"100%",padding:"11px",fontSize:14}},"Ajouter à la liste")
-  ),
-  // New category modal
-  showNewCat&&h(Modal,null,
-    h("div",{style:{fontWeight:700,fontSize:15,marginBottom:14}},"Nouvelle catégorie"),
-    h("div",{style:{fontSize:11,fontWeight:700,color:C.muted,marginBottom:5}},"NOM"),
-    h("input",{value:newCatName,onChange:function(e){setNewCatName(e.target.value);},placeholder:"ex: Équipe, Juridique...",autoFocus:true,style:{width:"100%",padding:"9px 12px",border:"1px solid "+C.border,borderRadius:8,fontSize:13,marginBottom:12,outline:"none",color:C.text}}),
-    h("div",{style:{fontSize:11,fontWeight:700,color:C.muted,marginBottom:5}},"ICÔNE"),
-    h("div",{style:{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}},CAT_ICONS.map(function(ic){return h("button",{key:ic,onClick:function(){setNewCatIcon(ic);},style:{fontSize:18,padding:4,borderRadius:6,border:"2px solid "+(newCatIcon===ic?C.accent:C.border),background:newCatIcon===ic?C.aL:"none",cursor:"pointer"}},ic);})),
-    h("div",{style:{fontSize:11,fontWeight:700,color:C.muted,marginBottom:5}},"COULEUR"),
-    h("div",{style:{display:"flex",gap:8,marginBottom:16}},PALETTE.map(function(col){return h("button",{key:col,onClick:function(){setNewCatColor(col);},style:{width:26,height:26,borderRadius:"50%",background:col,border:"3px solid "+(newCatColor===col?C.text:"transparent"),cursor:"pointer"}});})),
-    h(R,{gap:8},h(Btn,{onClick:addCat,style:{flex:1}},"Créer"),h(Btn,{variant:"ghost",onClick:function(){setShowNewCat(false);},style:{flex:1}},"Annuler"))
-  ),
-  p.items.length>0&&h(Fragment,null,
-    h(R,{style:{justifyContent:"space-between",flexWrap:"wrap",gap:8}},
-      h("div",{style:{display:"flex",gap:5,flexWrap:"wrap"}},
-        h("button",{onClick:function(){setFilter("all");},style:{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,border:"1px solid "+(filter==="all"?C.accent:C.border),background:filter==="all"?C.aL:C.surface,color:filter==="all"?C.accent:C.muted,cursor:"pointer"}},"À trier ("+fi.length+")"),
-        sortedCount>0&&h("span",{style:{fontSize:11,color:C.success,fontWeight:600}},"✅ "+sortedCount+" dans la matrice"),
-        dumpCats.filter(function(c){return p.items.some(function(i){return i.cat===c.id;});}).map(function(c){return h("button",{key:c.id,onClick:function(){setFilter(c.id);},style:{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,border:"1px solid "+(filter===c.id?c.color:C.border),background:filter===c.id?c.color+"22":C.surface,color:filter===c.id?c.color:C.muted,cursor:"pointer"}},c.icon+" "+p.items.filter(function(i){return i.cat===c.id;}).length);})
-      ),
-      h(Btn,{variant:"success",onClick:function(){setPhase("sort");}},"🎯 Trier dans la matrice →")
-    ),
-    h(Cl,{gap:5},fi.map(function(item){return h(R,{key:item.id,style:{background:C.surface,border:"1px solid "+C.border,borderLeft:"4px solid "+cC(item.cat),borderRadius:8,padding:"8px 12px"}},h("span",null,cI(item.cat)),h("span",{style:{flex:1,fontSize:13}},item.text),h("button",{onClick:function(){p.setItems(function(items){return items.filter(function(x){return x.id!==item.id;});});},style:{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:16,padding:0}},"×"));}))
-  ),
-  p.items.length===0&&h("div",{style:{background:C.surface,border:"1px dashed "+C.border,borderRadius:12,padding:40,textAlign:"center",color:C.muted}},h("div",{style:{fontSize:36,marginBottom:8}},"🧠"),h("div",{style:{fontSize:14}},"Page vide — parfait pour commencer"))
-);
-}
-
-// ── WAITING FOR FIELD ────────────────────────────────────────────
-  return h(Cl,{gap:12},
     h("div",{style:{background:"linear-gradient(135deg,#FBF5E0,#FFF9F0)",border:"2px solid "+C.gold,borderRadius:14,padding:14}},
       h(R,{style:{justifyContent:"space-between",marginBottom:10}},
         h("div",{style:{fontSize:13,fontWeight:700,color:C.gold}},"🌅 Rituel du matin"),
@@ -930,8 +999,6 @@ return h(Cl,{gap:14},
     )
   );
 }
-
-// ── DRAGGABLE STEP ────────────────────────────────────────────────
 function DraggableStep(p){
   var s=useState(false),over=s[0],setOver=s[1];
   return h("div",{onDragOver:function(e){e.preventDefault();setOver(true);},onDragLeave:function(){setOver(false);},onDrop:function(e){e.preventDefault();setOver(false);var from=parseInt(e.dataTransfer.getData("stepIdx"),10);if(!isNaN(from)&&from!==p.index)p.onReorder(from,p.index);},style:{marginBottom:6,borderRadius:8,border:over?"2px dashed "+C.accent:"2px solid transparent",opacity:over?0.5:1,transition:"border 0.1s"}},
@@ -1416,4 +1483,4 @@ ReactDOM.createRoot(document.getElementById("root")).render(h(App,null));
 })();
 </script>
 </body>
-</html
+</html>
